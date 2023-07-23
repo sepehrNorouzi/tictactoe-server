@@ -10,8 +10,9 @@ exports.init = (server) => {
             credentials: true,
         }
     });
-    
-    io.on('connection', stream)
+    io.on('connection', socket => {
+        stream(socket, io);
+    })
 }
 
 
