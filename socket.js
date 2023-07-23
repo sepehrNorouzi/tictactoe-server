@@ -1,5 +1,5 @@
 const { Server } = require('socket.io')
-
+const stream  = require('./ws/stream')
 
 exports.init = (server) => {
     const io = new Server(server, { 
@@ -11,9 +11,7 @@ exports.init = (server) => {
         }
     });
     
-    io.on('connection', () => {
-        console.log('connection established');
-    })
+    io.on('connection', stream)
 }
 
 
