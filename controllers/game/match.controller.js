@@ -89,6 +89,9 @@ const check_status = (board, turn) => {
 };
 
 exports.match_make = (socket, io) => {
+  if(match_wait.includes(socket)) {
+    return;
+  }
   match_wait.push(socket);
 
   if (match_wait.length >= 2) {
@@ -139,6 +142,10 @@ exports.make_move = (socket, io, data) => {
   if (isValidMove(board, row, col)) {
     board[row][col] = socket.p_turn;
     room.turn = (room.turn % 2) + 1;
+  }
+
+  else {
+    return socket.emit("error", {message: "Invalid move."})
   }
 
   const state = check_status(board, socket.p_turn);
