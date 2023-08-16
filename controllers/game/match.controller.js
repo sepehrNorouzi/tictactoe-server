@@ -1,5 +1,7 @@
 const match_wait = [];
 const { v4: uuidv4 } = require("uuid");
+const sequelize = require("../../db.util");
+const bcrypt = require("bcrypt");
 
 const status = { CONTINUE: 0, DRAW: 1, WIN: 2 };
 
@@ -88,8 +90,29 @@ const check_status = (board, turn) => {
   return status.CONTINUE;
 };
 
+const login = (username, password) => {
+  return new Promise((resolve, reject) => {
+    let user;
+    sequelize.models.User.findOne({ where: { username: username } })
+      .then((res) => {
+        user = res;
+        if (!user) {
+          reject("User not found.");
+        }
+        return bcrypt.compare(password, user.password);
+      })
+      .then((matched) => {
+        if (!matched) reject("Password is incorrect.");
+        resolve(user);
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
+};
+
 exports.match_make = (socket, io) => {
-  if(match_wait.includes(socket)) {
+  if (match_wait.includes(socket)) {
     return;
   }
   match_wait.push(socket);
@@ -142,10 +165,8 @@ exports.make_move = (socket, io, data) => {
   if (isValidMove(board, row, col)) {
     board[row][col] = socket.p_turn;
     room.turn = (room.turn % 2) + 1;
-  }
-
-  else {
-    return socket.emit("error", {message: "Invalid move."})
+  } else {
+    return socket.emit("error", { message: "Invalid move." });
   }
 
   const state = check_status(board, socket.p_turn);
@@ -161,3 +182,15 @@ exports.make_move = (socket, io, data) => {
     .to(data.room)
     .emit("move_made", { board: room.board, turn: room.turn });
 };
+
+exports.subscribe = (socket, io, data) => {
+  login(data.username, data.password).then(user => {
+    socket.user_id = user.id;
+    socket.user_username = username;
+    socket.has_active_match = false;
+    socket.match_room = null;
+    return;
+  }).catch(err => {
+    return err;
+  })
+}
